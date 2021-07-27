@@ -4,7 +4,7 @@ description: |
   ISSS608 Assignment
   
   The assignment topic are based on VAST Challenge 2021, Mini-Challenge 2
-  
+
 site: distill::distill_website
 ---
 

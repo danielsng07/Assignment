@@ -522,7 +522,7 @@ gps_path<-gps_sf %>%
 ### overplot the gps path of driver ID onto the background tourist map.
 ```{r echo=FALSE, eval=TRUE, fig.height=6}
 gps_path_selected<-gps_path 
-tmap_mode("plot")
+tmap_mode("view")
 tm_shape(bgmap) +
   tm_rgb(bgmap, r =1,g=2,b=3,
          alpha=NA,
@@ -615,7 +615,7 @@ gps_path<-gps_sf %>%
 ```{r echo=FALSE, eval=TRUE, fig.height=6}
 gps_path_selected<-gps_path %>%
   filter(id %in% c("101","104","106","107"))
-tmap_mode("plot")
+tmap_mode("view")
 tm_shape(bgmap) +
   tm_rgb(bgmap, r =1,g=2,b=3,
          alpha=NA,
@@ -690,7 +690,7 @@ gps_path<-gps_sf %>%
 ### overplot the gps path of driver ID onto the background tourist map.
 ```{r echo=FALSE, eval=TRUE, fig.height=6}
 gps_path_selected<-gps_path 
-tmap_mode("plot")
+tmap_mode("view")
 tm_shape(bgmap) +
   tm_rgb(bgmap, r =1,g=2,b=3,
          alpha=NA,

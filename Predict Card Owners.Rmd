@@ -1,0 +1,288 @@
+---
+title: "Predict Card Owners"
+site: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(fig.retina=3,
+                      echo = TRUE,
+                      eval = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+# Getting Started
+
+## Installing and Launching R Packages
+
+The code chunk below will check if the R packages have been installed, if not, R will install the missing R packages before launching them. 
+
+```{r, echo=TRUE, eval=TRUE}
+
+packages = c('ggiraph','raster','sf','tmap','clock','gifski','tidyverse','lubridate','DT',"lobstr","plotly","distill","patchwork","hms","viridis")
+for(p in packages){
+  if(!require(p,character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+}
+
+```
+
+## Importing Data
+
+This code chunk import *cc_data.csv* into R by using *read_csv()* of **readr** package.
+
+```{r, echo=TRUE, eval=TRUE}
+cc_data <-read_csv("data/cc_data.csv",locale = locale(encoding = 'windows-1250'))
+loyalty_data<-read_csv("data/loyalty_data.csv",locale = locale(encoding = 'windows-1250'))
+car_assignment_data<-read_csv("data/car-assignments.csv")
+gps_data<-read_csv("data/gps.csv")
+```
+
+# Data Preparation
+
+### Transforming data for cc_data.csv
+
+```{r, echo=TRUE, eval=TRUE}
+cc_data$timestamp <-  date_time_parse(cc_data$timestamp,
+                                      zone = "",
+                                      format = "%m/%d/%Y %H:%M")
+cc_data$last4ccnum <- as.character(cc_data$last4ccnum)
+cc_data$Day  = get_day(cc_data$timestamp)
+cc_data$Hour = get_hour(cc_data$timestamp)
+cc_data$Min = get_minute(cc_data$timestamp)
+cc_data$Weekday = wday(cc_data$timestamp, 
+                             label = TRUE, 
+                             abbr = TRUE,
+                        week_start = getOption("lubridate.week.start",1))
+cc_data$Time = format(cc_data$timestamp, format = "%H:%M:%S")
+cc_data$Time = as.hms(cc_data$Time)
+```
+
+### Transforming data for loyalty_data.csv
+
+```{r, echo=TRUE, eval=TRUE}
+loyalty_data$timestamp<- date_parse(loyalty_data$timestamp,
+                                    format = "%m/%d/%Y")
+loyalty_data$loyaltynum <- as.character(loyalty_data$loyaltynum)
+loyalty_data$Day = get_day(loyalty_data$timestamp)
+loyalty_data$Weekday = wday(loyalty_data$timestamp,
+                            label = TRUE,
+                            abbr = TRUE,
+                            week_start = getOption("lubridate.week.start",1))
+```
+
+### Transforming data for gps_data.csv
+
+```{r, echo=TRUE, eval=TRUE}
+gps_data$Timestamp<-date_time_parse(gps_data$Timestamp,
+                                    zone = "",
+                                    format="%m/%d/%Y %H:%M:%S")
+gps_data$id<-as_factor(gps_data$id) 
+gps_data$Day = get_day(gps_data$Timestamp)
+gps_data$Hour = get_hour(gps_data$Timestamp)
+gps_data$Min = get_minute(gps_data$Timestamp)
+gps_data$Sec = get_second(gps_data$Timestamp)
+gps_data$Weekday = wday(gps_data$Timestamp,
+                            label = TRUE,
+                            abbr = TRUE,
+                            week_start = getOption("lubridate.week.start",1))
+gps_data$Time = format(gps_data$Timestamp, format = "%H:%M:%S")
+gps_data$Time = as.hms(gps_data$Time)
+```
+
+### Transforming data for car-assignments.csv
+
+```{r, echo=TRUE, eval=TRUE}
+car_assignment_data$CarID<-as.factor(car_assignment_data$CarID)
+```
+
+### Joining GPS Data and Car Assignment Data using CarID
+
+```{r, echo=TRUE, eval=TRUE}
+driver_location_data<-gps_data %>%
+  left_join(car_assignment_data,by = c("id"="CarID"))%>%
+  replace_na(list(FirstName = "Unknown", LastName = "Driver", CurrentEmploymentType = "Unknown" ,CurrentEmploymentTitle = "Unknown" )) %>%
+  unite("Name",FirstName,LastName, sep = " ", remove = TRUE) 
+```
+
+
+
+
+
+### Task 3: Can you infer the owners of each credit card and loyalty card? What is your evidence? 
+
+1. Credit card total transactions vs Loyalty card total transactions
+
+```{r, echo=TRUE, eval=TRUE}
+Total_Transcation_cc<-cc_data%>%
+  count(location)%>%
+  summarise(Total_Trans= sum(n))
+Total_Transcation_cc
+```
+
+```{r, echo=TRUE, eval=TRUE}
+Total_Transcation_loyal<-loyalty_data%>%
+  count(location)%>%
+  summarise(Total_Trans= sum(n))
+Total_Transcation_loyal
+```
+
+There are unmatching records for both credit card loyalty card data. This mean that the data records on both datasets are uneven and there are 1490 transactions for credit cards and 1392 transacations for loyalty card.
+
+## We will do a join on both data to avoid missing out any of these unknown records.
+
+### Join Credit card data and Loyalty card using location, price and Day variables, keep all records in the credit card data
+
+```{r, echo=TRUE, eval=TRUE}
+cc_merge_loyalty<-cc_data %>%
+  left_join(loyalty_data,by = c("location"="location","price"="price","Day"="Day"),suffix = c("_cc","_loyalty"))%>%
+  select(-Weekday_loyalty,-timestamp_loyalty)%>%
+  replace_na(list(loyaltynum = "Unknown"))
+```
+
+### Join Loyalty card data with credit card data using location, price and Day variables
+
+```{r, echo=TRUE, eval=TRUE}
+loyalty_merge_cc<-loyalty_data %>%
+  left_join(cc_data,by = c("location"="location","price"="price","Day"="Day"),suffix = c("_cc","_loyalty"))%>%
+  select(-Weekday_loyalty,-timestamp_loyalty)%>%
+  replace_na(list(last4ccnum = "Unknown"))
+```
+
+The vehicle data consists of the details of the employees which are unlinked to the card transactions. It is hence important to link the vehicle data to infer the card owners. As mentioned in some of the literature review of VAST Challenge 2014 on Mini Challenge 2, we can use the vehicle stop time to find out on when the car have stopped and whether the employee may have gone to a specific locations to spend.
+
+### Creating the stop time and duration of during the stop time for all cars
+
+
+```{r, echo=TRUE, eval=TRUE}
+CarMovement<- driver_location_data %>%
+  group_by(id)%>%
+  mutate(VehicleStopTime=lag(Time))%>%
+  mutate(stopduration=abs(round(difftime(Time,VehicleStopTime,units = "mins"),digits = 2)))
+```
+
+### link CarMovement data with cc_merge_loyalty data using Day,Hour and Min
+
+```{r, echo=TRUE, eval=TRUE}
+OwnerCC<-CarMovement %>%
+  left_join(cc_merge_loyalty,by = c("Day"="Day","Hour"="Hour","Min"="Min"),suffix = c("_cc","_loyalty"))%>%
+  drop_na()%>%
+  select(id,Name,Time_cc,VehicleStopTime,location,price,last4ccnum,loyaltynum)
+```
+
+### link CarMovement data with cc_merge_loyalty data using Day,Hour and Min
+
+```{r, echo=TRUE, eval=TRUE}
+OwnerCC<-CarMovement %>%
+  filter(stopduration>1)%>%
+  left_join(cc_merge_loyalty,by = c("Day"="Day","Hour"="Hour","Min"="Min"))%>%
+  drop_na()%>%
+  select(id,Name,Timestamp,VehicleStopTime,stopduration,location,price,last4ccnum,loyaltynum)%>%
+print()
+```
+### link CarMovement data with loyalty_Merge_cc data using Day,Hour and Min
+
+```{r, echo=TRUE, eval=TRUE}
+OwnerLC<-CarMovement %>%
+  filter(stopduration>1)%>%
+  left_join(loyalty_merge_cc,by = c("Day"="Day","Hour"="Hour","Min"="Min"))%>%
+  drop_na()%>%
+  select(id,Name,Timestamp,VehicleStopTime,stopduration,location,price,last4ccnum,loyaltynum)%>%
+print()
+```
+
+The above method are used to link key fields which are the data timestamp on both set of data (the card transacation and vehicle movement) to infer the card owners for the credit card and loyalty card. 
+
+
+### Uncertainties faced in method
+
+1. There are scenarios where the same transactions timestamps above in the same location for example in the case of Kanon Herroro, he cannot be at the same location at the same time. Hence we will need to use the GPS movement to find out where Kanon Herrero is at this time of time. 
+
+```{r, echo=TRUE, eval=TRUE}
+OwnerCC<-CarMovement %>%
+  filter(stopduration>1)%>%
+  left_join(cc_merge_loyalty,by = c("Day"="Day","Hour"="Hour","Min"="Min"))%>%
+  drop_na()%>%
+  select(id,Name,Timestamp,VehicleStopTime,stopduration,location,price,last4ccnum,loyaltynum)%>%
+print()
+```
+
+### Setting up the tourist map
+
+```{r, echo=TRUE, eval=TRUE}
+bgmap<-raster("data/Geospatial/MC2-tourist.tif")
+bgmap
+```
+
+```{r, echo=TRUE, eval=TRUE}
+tmap_mode("plot")
+tm_shape(bgmap) +
+  tm_raster(bgmap,
+            legend.show = FALSE)
+```
+
+```{r, echo=TRUE, eval=TRUE}
+tm_shape(bgmap) +
+  tm_rgb(bgmap, r =1,g=2,b=3,
+         alpha=NA,
+         saturation = 1,
+         interpolate = TRUE,
+         max.value=255)
+```
+
+```{r, echo=TRUE, eval=TRUE}
+Abila_st<-st_read(dsn="data/Geospatial",layer="Abila")
+```
+
+```{r, echo=TRUE, eval=TRUE}
+KanonLoc<-CarMovement %>%
+  filter(Timestamp > "2014-01-06 06:00:00" & Timestamp <="2014-01-06 08:00:00" )
+```
+
+
+```{r, echo=TRUE, eval=TRUE}
+gps_sf<-st_as_sf(KanonLoc,
+                 coords=c("long","lat"),
+                 crs=4326)
+```
+
+```{r, echo=TRUE, eval=TRUE}
+gps_path<-gps_sf %>%
+  group_by(id) %>%
+  summarize(m=mean(Timestamp),
+            do_union=FALSE) %>%
+  st_cast("LINESTRING")
+```
+
+### overplot the gps path of driver ID onto the background tourist map.
+```{r echo=FALSE, eval=TRUE, fig.height=6}
+gps_path_selected<-gps_path %>%
+  filter(id == 25)
+tmap_mode("view")
+tm_shape(bgmap) +
+  tm_rgb(bgmap, r =1,g=2,b=3,
+         alpha=NA,
+         saturation=1,
+         interpolate=TRUE,
+         max.value=255)+
+  tm_shape(gps_path_selected)+
+  tm_lines()
+```
+Based on the map location, Kanon Herrero is located near to Brew've Been Served than at Hallowed Grounds.However the other transaction at Hallowed Grounds is unmatched.
+
+2. In the event where the location such as Hippokampos is not located in the map. We will not be able to infer the onwer where in the case below, there are two matching records where there is two different id (23 and 101) which matches the timestamp. In this case, it could be that Varka Lagos is paying the bill for CarId 101 employee who visited the same location with him. In this case, we are unsure the card number of 4795 belong to which persons (Varja, or Truck driver 101 or 104) who paid the bill using the same credit card and loyalty card.
+
+```{r, echo=TRUE, eval=TRUE}
+OwnerLC<-CarMovement %>%
+  filter(stopduration>1)%>%
+  left_join(loyalty_merge_cc,by = c("Day"="Day","Hour"="Hour","Min"="Min"))%>%
+  drop_na()%>%
+  select(id,Name,Timestamp,VehicleStopTime,stopduration,location,price,last4ccnum,loyaltynum)%>%
+  filter(location=="Hippokampos")%>%
+print()
+```
+
+

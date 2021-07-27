@@ -487,7 +487,6 @@ tm_shape(bgmap) +
          max.value=255)+
   tm_shape(gps_path_selected)+
   tm_lines()
-tmap_mode("plot")
 ```
 
 These employee involved in this gathering are from only two department, 3 from Information Technology and 7 from Engineering department.

@@ -478,7 +478,7 @@ gps_path<-gps_sf %>%
 ```{r echo=FALSE, eval=TRUE, fig.height=6}
 gps_path_selected<-gps_path %>%
   filter(id %in% c("1","3","5","6","7","14","18","19","25","26"))
-tmap_mode("plot")
+tmap_mode("view")
 tm_shape(bgmap) +
   tm_rgb(bgmap, r =1,g=2,b=3,
          alpha=NA,
@@ -487,6 +487,7 @@ tm_shape(bgmap) +
          max.value=255)+
   tm_shape(gps_path_selected)+
   tm_lines()
+tmap_mode("plot")
 ```
 
 These employee involved in this gathering are from only two department, 3 from Information Technology and 7 from Engineering department.

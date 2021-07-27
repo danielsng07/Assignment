@@ -1,0 +1,18 @@
+name: "VastC_MC2_Assignment"
+title: "Visual Detective"
+description: |
+  Visual Detective
+output_dir: "_site"
+navbar:
+  right:
+    - text: "Home"
+      href: index.html
+    - text: "Introduction"
+      href: about.html
+    - text: "Insights on Cards Transactions"
+      href: Insights-Cards-Transactions.html
+    - text: "Insights on Vehicle Movement"
+      href: Insights-Vehicle-Transactions.html
+    - text: "Predict Card owners"
+      href: Predict-Card-Owners.html
+output: distill::distill_article

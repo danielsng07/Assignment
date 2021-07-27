@@ -1,10 +1,34 @@
 ---
-title: "About this site"
+title: "Introduction"
 description: |
-  Some additional details about the website
+  Background and Literature Review
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+
+# Learn more about creating websites with Distill at:
+# https://rstudio.github.io/distill/website.html
+
 ```
+
+# Introduction
+
+Mini-Challenge 2 asks to analyze movement and tracking data. GAStech provides many of their employees with company cars for their personal and professional use, but unbeknownst to the employees, the cars are equipped with GPS tracking devices. You are given tracking data for the two weeks leading up to the disappearance, as well as credit card transactions and loyalty card usage data. From this data, can you identify anomalies and suspicious behaviors? Can you identify which people use which credit and loyalty cards?
+
+# Literature Review
+
+Literature review are done on selected submissions from [VAST Challenged 2014](http://visualdata.wustl.edu/varepository/VAST%20Challenge%202014/challenges/MC2%20-%20Patterns%20of%20Life%20Analysis/). In addition, literature review are also done on recommended works from past Assignments from Prof Kam which is done by MITB students from previous batches. 
+
+Several major findings are noted from the literature review, there are as follow:
+
+1. In the Vast Challenge 2014, the credit card owner name are provided in the credit card and loyalty card dataset which is not provided in Vast Challenge 2021 and investigation is required to find out the owners of each credit card and loyalty card. 
+
+2. The data are imperfect with some errors in the GPS data for certain car ID. 
+
+3. Visualisation techniques learned includes coloring mapping of event points using heat map, visualise time series data by spliting the TimeStamp into hours and by weekday and weekend. 
+
+4. Data Preparation techniques includes to classified the employees into two type, General and Truck Drivers, understanding how the GPS data could be manipulate by creating a start and end time variable to track the vehicle movement.
+
+5. Data Analysis techniques includes analyzing the daily routines of GAStech employess to understand their pattern of travelling and the place of interest. In addition, to cluster the employees according to their place of interests.
 

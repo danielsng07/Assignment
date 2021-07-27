@@ -86,29 +86,29 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 </style>
 
   <!--radix_placeholder_meta_tags-->
-  <title>Visual Detective: About this site</title>
+  <title>Visual Detective: Introduction</title>
 
-  <meta property="description" itemprop="description" content="Some additional details about the website"/>
+  <meta property="description" itemprop="description" content="Background and Literature Review"/>
 
 
 
   <!--  https://developers.facebook.com/docs/sharing/webmasters#markup -->
-  <meta property="og:title" content="Visual Detective: About this site"/>
+  <meta property="og:title" content="Visual Detective: Introduction"/>
   <meta property="og:type" content="article"/>
-  <meta property="og:description" content="Some additional details about the website"/>
+  <meta property="og:description" content="Background and Literature Review"/>
   <meta property="og:locale" content="en_US"/>
   <meta property="og:site_name" content="Visual Detective"/>
 
   <!--  https://dev.twitter.com/cards/types/summary -->
   <meta property="twitter:card" content="summary"/>
-  <meta property="twitter:title" content="Visual Detective: About this site"/>
-  <meta property="twitter:description" content="Some additional details about the website"/>
+  <meta property="twitter:title" content="Visual Detective: Introduction"/>
+  <meta property="twitter:description" content="Background and Literature Review"/>
 
   <!--/radix_placeholder_meta_tags-->
   <!--radix_placeholder_rmarkdown_metadata-->
 
   <script type="text/json" id="radix-rmarkdown-metadata">
-  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description"]}},"value":[{"type":"character","attributes":{},"value":["About this site"]},{"type":"character","attributes":{},"value":["Some additional details about the website"]}]}
+  {"type":"list","attributes":{"names":{"type":"character","attributes":{},"value":["title","description"]}},"value":[{"type":"character","attributes":{},"value":["Introduction"]},{"type":"character","attributes":{},"value":["Background and Literature Review"]}]}
   </script>
   <!--/radix_placeholder_rmarkdown_metadata-->
   <!--radix_placeholder_navigation_in_header-->
@@ -2053,7 +2053,7 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 <!--radix_placeholder_front_matter-->
 
 <script id="distill-front-matter" type="text/json">
-{"title":"About this site","description":"Some additional details about the website","authors":[]}
+{"title":"Introduction","description":"Background and Literature Review","authors":[]}
 </script>
 
 <!--/radix_placeholder_front_matter-->
@@ -2078,14 +2078,26 @@ code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
 <!--/radix_placeholder_site_before_body-->
 
 <div class="d-title">
-<h1>About this site</h1>
+<h1>Introduction</h1>
 <!--radix_placeholder_categories-->
 <!--/radix_placeholder_categories-->
-<p><p>Some additional details about the website</p></p>
+<p><p>Background and Literature Review</p></p>
 </div>
 
 
 <div class="d-article">
+<h1 id="introduction">Introduction</h1>
+<p>Mini-Challenge 2 asks to analyze movement and tracking data. GAStech provides many of their employees with company cars for their personal and professional use, but unbeknownst to the employees, the cars are equipped with GPS tracking devices. You are given tracking data for the two weeks leading up to the disappearance, as well as credit card transactions and loyalty card usage data. From this data, can you identify anomalies and suspicious behaviors? Can you identify which people use which credit and loyalty cards?</p>
+<h1 id="literature-review">Literature Review</h1>
+<p>Literature review are done on selected submissions from <a href="http://visualdata.wustl.edu/varepository/VAST%20Challenge%202014/challenges/MC2%20-%20Patterns%20of%20Life%20Analysis/">VAST Challenged 2014</a>. In addition, literature review are also done on recommended works from past Assignments from Prof Kam which is done by MITB students from previous batches.</p>
+<p>Several major findings are noted from the literature review, there are as follow:</p>
+<ol type="1">
+<li><p>In the Vast Challenge 2014, the credit card owner name are provided in the credit card and loyalty card dataset which is not provided in Vast Challenge 2021 and investigation is required to find out the owners of each credit card and loyalty card.</p></li>
+<li><p>The data are imperfect with some errors in the GPS data for certain car ID.</p></li>
+<li><p>Visualisation techniques learned includes coloring mapping of event points using heat map, visualise time series data by spliting the TimeStamp into hours and by weekday and weekend.</p></li>
+<li><p>Data Preparation techniques includes to classified the employees into two type, General and Truck Drivers, understanding how the GPS data could be manipulate by creating a start and end time variable to track the vehicle movement.</p></li>
+<li><p>Data Analysis techniques includes analyzing the daily routines of GAStech employess to understand their pattern of travelling and the place of interest. In addition, to cluster the employees according to their place of interests.</p></li>
+</ol>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
 <!--radix_placeholder_article_footer-->
 <!--/radix_placeholder_article_footer-->

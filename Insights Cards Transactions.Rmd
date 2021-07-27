@@ -1,0 +1,326 @@
+---
+title: "Insights on Cards Transactions"
+site: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(fig.retina=3,
+                      echo = TRUE,
+                      eval = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+# Getting Started
+
+## Installing and Launching R Packages
+
+The code chunk below will check if the R packages have been installed, if not, R will install the missing R packages before launching them. 
+
+```{r, echo=TRUE, eval=TRUE}
+
+packages = c('ggiraph','raster','sf','tmap','clock','gifski','tidyverse','lubridate','DT',"lobstr","plotly","distill","patchwork","hms","viridis")
+for(p in packages){
+  if(!require(p,character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+}
+
+```
+
+## Importing Data
+
+This code chunk import *cc_data.csv* into R by using *read_csv()* of **readr** package.
+
+```{r, echo=TRUE, eval=TRUE}
+cc_data <-read_csv("data/cc_data.csv",locale = locale(encoding = 'windows-1250'))
+loyalty_data<-read_csv("data/loyalty_data.csv",locale = locale(encoding = 'windows-1250'))
+```
+
+### Transforming data for cc_data.csv
+
+```{r, echo=TRUE, eval=TRUE}
+cc_data$timestamp <-  date_time_parse(cc_data$timestamp,
+                                      zone = "",
+                                      format = "%m/%d/%Y %H:%M")
+cc_data$last4ccnum <- as.character(cc_data$last4ccnum)
+cc_data$Day  = get_day(cc_data$timestamp)
+cc_data$Hour = get_hour(cc_data$timestamp)
+cc_data$Min = get_minute(cc_data$timestamp)
+cc_data$Weekday = wday(cc_data$timestamp, 
+                             label = TRUE, 
+                             abbr = TRUE,
+                        week_start = getOption("lubridate.week.start",1))
+cc_data$Time = format(cc_data$timestamp, format = "%H:%M:%S")
+cc_data$Time = as.hms(cc_data$Time)
+```
+
+### Transforming data for loyalty_data.csv
+
+```{r, echo=TRUE, eval=TRUE}
+loyalty_data$timestamp<- date_parse(loyalty_data$timestamp,
+                                    format = "%m/%d/%Y")
+loyalty_data$loyaltynum <- as.character(loyalty_data$loyaltynum)
+loyalty_data$Day = get_day(loyalty_data$timestamp)
+loyalty_data$Weekday = wday(loyalty_data$timestamp,
+                            label = TRUE,
+                            abbr = TRUE,
+                            week_start = getOption("lubridate.week.start",1))
+```
+
+# Task 1 
+
+## Using just the credit and loyalty card data, identify the most popular locations, and when they are popular.
+
+### 1a Identifying the most popular locations
+
+#### List locations popularity based on total transactions (from credit card data)
+
+```{r, echo=TRUE, eval=TRUE}
+  cc_data %>%
+  group_by(location)%>%
+  summarise(Transactions = n())%>%
+  arrange(desc(Transactions)) %>%
+  print(n = 34)
+```
+
+List top 5 locations based on total transactions (credit card data)
+
+```{r, echo=TRUE, eval=TRUE}
+top5cc_loc<-cc_data %>%
+  group_by(location)%>%
+  summarise(Transactions = n())%>%
+  top_n(5,Transactions)
+top5cc_loc
+Plot_top5cc_loc<-ggplot(top5cc_loc,aes(x= reorder(location,Transactions),y=Transactions,fill=location))+geom_col()+xlab("Locations") +coord_flip()+ggtitle("Top 5 locations based on transactions (from credit card data)") + theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(),panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+ theme(legend.position="none")
+```
+
+#### List locations popularity based on total transactions (loyalty card data)
+
+```{r, echo=TRUE, eval=TRUE}
+  loyalty_data %>%
+  group_by(location)%>%
+  summarise(Transactions = n())%>%
+  arrange(desc(Transactions))
+```
+
+List top 5 locations based on total transactions (based on loyalty card data)
+
+```{r, echo=TRUE, eval=TRUE}
+top5lc_loc<-loyalty_data %>%
+  group_by(location)%>%
+  summarise(Transactions = n())%>%
+  top_n(5,Transactions)%>%
+  arrange(desc(Transactions))
+top5lc_loc
+Plot_top5lc_loc<- ggplot(top5lc_loc,aes(x= reorder(location,Transactions),y=Transactions,fill=location))+geom_col()+xlab("Locations")+coord_flip()+ggtitle("Top 5 locations based on transactions (from loyalty card data)")+theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+ theme(legend.position="none")
+```
+
+### Credit card data top 5 vs Loyal card data top 5
+```{r, echo=TRUE, eval=TRUE}
+Plot_top5cc_loc+Plot_top5lc_loc+ plot_layout(nrow = 2, byrow = FALSE)
+```
+
+Findings 1: Katerina’s Café is still the most popular location. 
+
+#### List locations popularity based on consumption amount (from credit card data)
+
+```{r, echo=TRUE, eval=TRUE}
+  loc_sales_cc<-cc_data %>%
+  group_by(location)%>%
+  summarise(Average_Sales = mean(price), Max_Sales = max(price), Min_Sales = min(price), Total_Sales=sum(price))%>%
+  arrange(desc(Total_Sales)) %>%
+  print(n=34)
+  ggplot(loc_sales_cc,aes(x=Average_Sales,y=reorder(location,Average_Sales),fill=location))+geom_col()+ylab("Locations")+ggtitle("Locations ranked by Average Sales (from credit card data)")+ theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+theme(legend.position="none")
+  
+  ggplot(loc_sales_cc,aes(x=Max_Sales,y=reorder(location,Max_Sales),fill=location))+geom_col()+ylab("Locations")+ggtitle("Locations ranked by largest Single Transaction amount (from credit card data)")+ theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+theme(legend.position="none")
+  
+  ggplot(loc_sales_cc,aes(x=Min_Sales,y=reorder(location,Min_Sales),fill=location))+geom_col()+ylab("Locations")+ggtitle("Locations ranked by smallest Single Transaction amount (from credit card data)")+ theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+theme(legend.position="none")
+ 
+  ggplot(loc_sales_cc,aes(x=Total_Sales,y=reorder(location,Total_Sales),fill=location))+geom_col()+ylab("Locations")+ggtitle("Locations ranked by Total Sales (from credit card data)")+ theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+theme(legend.position="none")
+  
+```
+
+There is a unusual high spending amount at Frydos Autosupply n' More.
+The minimum transaction sales amount for Abila Scrapyard and Maximum Iron and Steel are above the average sales amount. 
+
+#### List credit card number based on consumption amount (from credit card data)
+
+```{r, echo=TRUE, eval=TRUE}
+  cc_spentamt<-cc_data %>%
+  group_by(last4ccnum)%>%
+  summarise(Average_Spent = round(mean(price),digits = 2), Max_Spent = max(price), Min_Spent = min(price), Total_Spent=sum(price))%>%
+  arrange(desc(Total_Spent)) %>%
+  print(n = 55)
+
+  Plot1<-plot_ly(cc_spentamt,x=~Average_Spent,y=~Total_Spent,color=~last4ccnum,hoverinfo = "text",text=~paste("Average Spent:", Average_Spent, "<br>", "Total Spent:" , Total_Spent,"<br>", "Last 4 credit card number:", last4ccnum)) %>%
+    add_markers(colors="Dark2",marker=list(opacity=0.7),showlegend=FALSE,ids=~last4ccnum)%>%
+    layout(title = "Spending Pattern based on credit card number")
+  
+ Plot2<-plot_ly(cc_spentamt,x=~Average_Spent,y=~Max_Spent,color=~last4ccnum,hoverinfo = "text",text=~paste("Average Spent:", Average_Spent, "<br>", "Highest Spent:" , Max_Spent,"<br>", "Last 4 credit card number:", last4ccnum)) %>%
+    add_markers(colors="Dark2",marker=list(opacity=0.7),showlegend=FALSE,ids=~last4ccnum)%>%
+    layout(title = "Spending Pattern based on credit card number")
+    
+  Plot3<-plot_ly(cc_spentamt,x=~Average_Spent,y=~Min_Spent,color=~last4ccnum,hoverinfo = "text",text=~paste("Average Spent:", Average_Spent, "<br>", "Lowest Spent:" , Min_Spent,"<br>", "Last 4 credit card number:", last4ccnum)) %>%
+    add_markers(colors="Dark2",marker=list(opacity=0.7),showlegend=FALSE,ids=~last4ccnum)%>%
+    layout(title = "Spending Pattern based on credit card number")
+  
+  subplot(Plot1,Plot2,Plot3,nrows = 3,shareY = TRUE,shareX = TRUE)
+  
+```
+
+We noticed that card owner 9551 spent 10,000 in one transaction and the other transactions have large disparity with average spent of 409.
+
+#### List locations popularity based on consumption amount (from loyalty card data)
+
+```{r, echo=TRUE, eval=TRUE}
+  Loc_Sales_lc<-loyalty_data %>%
+  group_by(location)%>%
+  summarise(Average_Sales = mean(price), Max_Sales = max(price), Min_Sales = min(price), Total_Sales=sum(price))%>%
+  arrange(desc(Total_Sales)) %>%
+  print(n = 33)
+
+  ggplot(Loc_Sales_lc,aes(x=Average_Sales,y=reorder(location,Average_Sales),fill=location))+geom_col()+ylab("Locations")+ggtitle("Locations ranked by Average Sales (from loyalty card data)")+ theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+theme(legend.position="none")
+  
+  ggplot(Loc_Sales_lc,aes(x=Max_Sales,y=reorder(location,Max_Sales),fill=location))+geom_col()+ylab("Locations")+ggtitle("Locations ranked by largest Single Transaction amount (from loyalty card data)")+ theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+theme(legend.position="none")
+  
+  ggplot(Loc_Sales_lc,aes(x=Min_Sales,y=reorder(location,Min_Sales),fill=location))+geom_col()+ylab("Locations")+ggtitle("Locations ranked by smallest Single Transaction amount (from loyalty card data)")+ theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+theme(legend.position="none")
+ 
+  ggplot(Loc_Sales_lc,aes(x=Total_Sales,y=reorder(location,Total_Sales),fill=location))+geom_col()+ylab("Locations")+ggtitle("Locations ranked by Total Sales (from loyalty card data)")+ theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+theme(legend.position="none")
+```
+
+In the loyalty card data, the unusual $10,000 spending at Frydos Autosupply n' More did not appear in the loyalty card data. It is suspicious on this spending as the employee who spent this amount would have gain discount or extra benefits using the loyalty card. 
+
+#### List Loyalty card number based on consumption amount (from loyalty card data)
+
+```{r, echo=TRUE, eval=TRUE}
+  loy_spentamt<-loyalty_data%>%
+  group_by(loyaltynum)%>%
+  summarise(Average_Spent = round(mean(price),digits = 2), Max_Spent = max(price), Min_Spent = min(price), Total_Spent=sum(price))%>%
+  arrange(desc(Total_Spent)) %>%
+  print(n=54)
+  
+  Plot4<-plot_ly(loy_spentamt,x=~Average_Spent,y=~Total_Spent,color=~loyaltynum,hoverinfo = "text",text=~paste("Average Spent:", Average_Spent, "<br>", "Total Spent:" , Total_Spent,"<br>", "Loyalty card number:", loyaltynum)) %>%
+    add_markers(colors="Dark2",marker=list(opacity=0.7),showlegend=FALSE,ids=~loyaltynum)%>%
+    layout(title = "Spending Pattern based on loyalty card number")
+  
+ Plot5<-plot_ly(loy_spentamt,x=~Average_Spent,y=~Max_Spent,color=~loyaltynum,hoverinfo = "text",text=~paste("Average Spent:", Average_Spent, "<br>", "Highest Spent:" , Max_Spent,"<br>", "Loyalty card number:", loyaltynum)) %>%
+    add_markers(colors="Dark2",marker=list(opacity=0.7),showlegend=FALSE,ids=~loyaltynum)%>%
+    layout(title = "Spending Pattern based on loyalty card number")
+    
+  Plot6<-plot_ly(loy_spentamt,x=~Average_Spent,y=~Min_Spent,color=~loyaltynum,hoverinfo = "text",text=~paste("Average Spent:", Average_Spent, "<br>", "Lowest Spent:" , Min_Spent,"<br>", "Loyalty card number:", loyaltynum)) %>%
+    add_markers(colors="Dark2",marker=list(opacity=0.7),showlegend=FALSE,ids=~loyaltynum)%>%
+    layout(title = "Spending Pattern based on loyalty card number")
+  
+  subplot(Plot4,Plot5,Plot6,nrows = 3,shareY = TRUE,shareX = TRUE)
+
+```
+
+Key findings on the shortlisted popular locations based on the day and time of transactions. 
+1. Card L4149 spending pattern is irregular. L4149 have low average spent but have one high spending transaction. 
+
+
+### 1b When are these locations popular?
+
+List the day of the week which the locations are popular (on credit card data)
+
+```{r, echo=TRUE, eval=TRUE}
+popday_cc<-cc_data %>%
+  filter(location %in% c("Brew've Been Served","Katerina’s Café","Hippokampos","Guy's Gyros","Hallowed Grounds")) %>%
+  count(location,Weekday)%>%
+  arrange(desc(n))
+popday_cc
+P1<-ggplot(popday_cc,aes(x= Weekday,y=n,fill=Weekday))+geom_col()+xlab("Day of the Week")+ylab("Transactions")+coord_flip()+ggtitle("Day Popularity on Top 5 locations (from credit card data)")+theme_update(text = element_text(family = "serif", size = 8),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+ theme(legend.position="none") + facet_grid(~location)
+P1
+```
+
+List the hour of the day which the locations are popular (on credit card data)
+
+```{r, echo=TRUE, eval=TRUE}
+pophour_cc<-cc_data %>%
+  filter(location %in% c("Brew've Been Served","Katerina’s Café","Hippokampos","Guy's Gyros","Hallowed Grounds")) %>%
+  group_by(location,Hour)%>%
+  summarise(Hourcount = n())%>%
+  arrange(desc(Hourcount))
+pophour_cc
+P2<-ggplot(pophour_cc,aes(x= Hour,y=Hourcount,fill=Hour))+geom_col()+ scale_x_continuous("Hour",limits = c(0,23), breaks = seq(0,23,4),expand = c(0,0.5))+xlab("Hour")+ylab("Transactions")+ggtitle("Popular Time of the day on Top 5 locations (from credit card data)")+theme_update(text = element_text(family = "serif", size = 12),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+ theme(legend.position="none") + facet_grid(~location)
+P2
+```
+
+### Compare Day of the week popularity vs Popular timing
+
+```{r, echo=TRUE, eval=TRUE}
+P1+P2 + plot_layout(nrow = 2, byrow = FALSE)
+```
+
+### List the day of the week which the locations are popular (on loyalty card data)
+
+```{r, echo=TRUE, eval=TRUE}
+popday_loyal<-loyalty_data %>%
+  filter(location %in% c("Brew've Been Served","Katerina’s Café","Hippokampos","Guy's Gyros","Ouzeri Elian")) %>%
+  count(location,Weekday)%>%
+  arrange(desc(n))
+popday_loyal
+ggplot(popday_loyal,aes(x= Weekday,y=n,fill=Weekday))+geom_col()+xlab("Day of the Week")+ylab("Transactions")+coord_flip()+ggtitle("Day Popularity on Top 5 locations (from loyalty card data)")+theme_update(text = element_text(family = "serif", size = 8),rect = element_blank(), panel.grid = element_blank(), title = element_text(color = "#8b0000"),axis.line = element_line(color = "black"))+ theme(legend.position="none") + facet_grid(~location)
+```
+
+###Compare Day of the week popularity vs Popular timing of location in credit card data vs loyalty card data
+
+```{r, echo=TRUE, eval=TRUE}
+P1+P2 + plot_layout(nrow = 2, byrow = FALSE)
+```
+
+Key findings on the shortlisted popular locations based on the day and time of transactions. 
+
+1. Hippokampos are popular during lunch hour as compared to dinner hour. It could be possible that Hippokampos are nearer to GASTech office and hence it is more popular during lunch time. However Hippokampos did not appear on the landmark in the tourist map provided, hence this could be just a possibility. 
+
+2. Katerina’s Café vs Hippokampos. Katerina’s Café rank more in transactions based on credit card data than Hippokampos, however Hippokampos rank higher in transactions than Katerina’s Café in the loyalty card data. We reckoned that Hippokampos may have offer better benefits if employees use their loyalty card for payment there. 
+
+3. Katerina’s Café is very popular on Saturday for both the credit card and loyalty card data. We reckoned that this could be a popular restuarants that suit family. 
+
+4. Guy's Gyros are least popular on Saturday for both the credit card and loyalty card data. We reckoned that this could be a pub for the guys but Saturday is a family day for some family time, hence the popularity on this day dip as compared to Thursday and Friday.   
+
+
+### 1c Anomalies Discovery
+
+1. Credit card total transactions vs Loyalty card total transactions
+
+```{r, echo=TRUE, eval=TRUE}
+Total_Transcation_cc<-cc_data%>%
+  count(location)%>%
+  summarise(Total_Trans= sum(n))
+Total_Transcation_cc
+```
+
+```{r, echo=TRUE, eval=TRUE}
+Total_Transcation_loyal<-loyalty_data%>%
+  count(location)%>%
+  summarise(Total_Trans= sum(n))
+Total_Transcation_loyal
+```
+
+1. The number of credit card transactions are higher than loyalty card transaction. We reckoned that that there are employees who did not use the loyalty card for their transactions. There could be possibility of fraud or suspicious transaction resulting in the employee not using the loyalty card when making payment. Other possibility is that the transaction for the loyalty card could involve cash payment only.
+
+2. There is no transaction at Brew've Been Served and Hallowed Grounds on the weekend. On the weekday, the transactions are usually between 7-9am only. We reckoned that they are not opened over the weekend and the operating hours is only in the morning. However this is strange as how can the business survive with their operating costs based on short operating hours and on five days week.
+
+### 1d Recommendations / corrections for these anomalies
+
+1. There are a lack of clarity on some of the popular places such as Hippokampos and Guy's Gyros, on what type of business they are operating as. For Hippokampos, it cannot be found in the map. For Guy's Gyros, it is hard to infer from the logo on the map on what is the business operating as. Is it a cloth store, a restaurant or a pub? It is unknown. It is recommended that the data can provide clarity such as category of locations. 
+
+2. It is also a mystery on why there are so low consumption of Fuel spending. It is noticeable that there are very little transactions. Is there free fuel refill at GAStech office? This require some clarity to clear the doubts.
+
+```{r, echo=TRUE, eval=TRUE}
+cc_data%>%
+  filter(location %in% c("Frank's Fuel","U-Pump"))%>%
+  count(location)
+```
+```{r, echo=TRUE, eval=TRUE}
+loyalty_data%>%
+  filter(location %in% c("Frank's Fuel","U-Pump"))%>%
+  count(location)
+```
+There are just few transactions for so many cars assigned to Employees. Assuming the fuel refill is free for all employees, how does this few transactions is being account for? Is the purchase at the shop for buying fuels for some illegal activities or the employee just need to buy something from the store at these locations?
+
+
